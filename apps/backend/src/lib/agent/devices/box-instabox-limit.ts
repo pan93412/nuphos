@@ -84,6 +84,20 @@ export async function teamBoxUsage(teamId: string, resumed?: string) {
   return { machines, self, boxVcpus, usedVcpus: runningVcpus(machines) + ordering * boxVcpus }
 }
 
+async function checkWithinLimit(teamId: string, limit: number, resumed: string | undefined) {
+  const { self, boxVcpus, usedVcpus } = await teamBoxUsage(teamId, resumed)
+
+  // Already running: resuming starts nothing new.
+  if (!self || runningVcpus([self]) === 0) assertWithinLimit(teamId, limit, usedVcpus, boxVcpus)
+}
+
+/** Refuses, with the 402 a start would give, resuming a Box the team's limit does not allow now. */
+export async function assertCanResume(teamId: string, sandboxId: string): Promise<void> {
+  const { limit } = await teamVcpuLimit(teamId)
+
+  if (limit !== undefined) await checkWithinLimit(teamId, limit, sandboxId)
+}
+
 /** How long a start may hold the team's start lease if it never releases it. */
 const LEASE_MS = 60_000
 /** How long a start waits for another start in the same team. */
@@ -124,10 +138,7 @@ export async function startWithinLimit<T>(
   if (!token)
     throw new AppError(409, 'box_starting', 'Another Box in this team is starting; try again')
   try {
-    const { self, boxVcpus, usedVcpus } = await teamBoxUsage(teamId, resumed)
-
-    // Already running: resuming starts nothing new.
-    if (!self || runningVcpus([self]) === 0) assertWithinLimit(limit, usedVcpus, boxVcpus)
+    await checkWithinLimit(teamId, limit, resumed)
 
     return await start()
   } finally {

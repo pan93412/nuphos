@@ -22,6 +22,7 @@ export function OnboardingFlow({
   onJoinDiscoverableTeam,
   onLogout,
   onFinish,
+  onOpenBilling,
 }: OnboardingFlowProps) {
   // Set once a new workspace exists: its agent setup takes over the window. Joiners skip it.
   const [setupTeam, setSetupTeam] = useState<AtlasTeam | null>(null)
@@ -119,7 +120,14 @@ export function OnboardingFlow({
     return () => window.removeEventListener('keydown', onKey)
   }, [dismissable, onClose])
 
-  if (setupTeam) return <AgentSetupFlow team={setupTeam} onFinish={() => onFinish(setupTeam.id)} />
+  if (setupTeam)
+    return (
+      <AgentSetupFlow
+        team={setupTeam}
+        onFinish={() => onFinish(setupTeam.id)}
+        onOpenBilling={onOpenBilling && (() => onOpenBilling(setupTeam.id))}
+      />
+    )
 
   return (
     // The overlay stays transparent so the window's native vibrancy/blur shows

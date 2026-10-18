@@ -33,6 +33,8 @@ export type OnboardingFlowProps = {
   onLogout?: () => void
   /** Finish onboarding and land in the app on the given team (if any). */
   onFinish: (teamId: string | null) => void
+  /** Leave onboarding for the new workspace's Billing, where a Box plan is chosen. */
+  onOpenBilling?: (teamId: string) => void
 }
 
 // The onboarding conversation asks for a workspace name, then shows it being
