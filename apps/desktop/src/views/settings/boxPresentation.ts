@@ -4,7 +4,6 @@ import type {
   BoxAccess,
   BoxState,
   BoxStatus,
-  BoxUsage,
   LocalAgentProvider,
 } from '../../api/device-types'
 import type { RuntimeInstance } from '../../types/runtime'
@@ -236,15 +235,3 @@ export const BOX_PLANS = [
     perks: ['Many agents working in parallel', 'Boxes for the whole team at once'],
   },
 ]
-
-/** Why the team's vCPU limit keeps a new Box from starting; null when one can start. */
-export function newBoxBlockedReason(usage: BoxUsage | null, isAdmin: boolean): string | null {
-  if (usage?.limitVcpus === 0)
-    return isAdmin
-      ? 'Your team has no Box plan yet. Choose a plan to start a Box.'
-      : 'Ask a team administrator to add a Box plan.'
-  if (usage?.limitVcpus == null || usage.usedVcpus === null || usage.boxVcpus === null) return null
-  if (usage.usedVcpus + usage.boxVcpus <= usage.limitVcpus) return null
-
-  return `Your running Boxes use ${String(usage.usedVcpus)} of ${String(usage.limitVcpus)} vCPU, and a new Box needs ${String(usage.boxVcpus)}. Pause a Box or upgrade.`
-}

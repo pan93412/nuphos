@@ -75,7 +75,6 @@ function WorkspacePane({ user, onLogout, onUserUpdated }: WorkspaceProps) {
     createWorkspaceForOnboarding,
     finishOnboarding,
     closeOnboarding,
-    openSettingsSection,
     openCreateTeam,
     createTeamAndEnter,
     handleLogout,
@@ -123,10 +122,6 @@ function WorkspacePane({ user, onLogout, onUserUpdated }: WorkspaceProps) {
           onJoinDiscoverableTeam={joinDiscoverableTeam}
           onLogout={handleLogout}
           onFinish={finishOnboarding}
-          onOpenBilling={(teamId) => {
-            finishOnboarding(teamId)
-            openSettingsSection('workspace.billing')
-          }}
         />
       </>
     )

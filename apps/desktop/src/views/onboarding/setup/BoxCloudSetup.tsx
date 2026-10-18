@@ -75,7 +75,6 @@ export function BoxCloudSetup({
   onCreated,
   onBack,
   onConnected,
-  onOpenBilling,
 }: {
   teamId: string
   /** The Box this flow made; owned by the flow so it outlives Back. */
@@ -83,9 +82,8 @@ export function BoxCloudSetup({
   onCreated: (deviceId: string) => void
   onBack: () => void
   onConnected: (instance: RuntimeInstance) => void
-  onOpenBilling?: () => void
 }) {
-  const box = useBoxSetup(teamId, deviceId, onCreated, onOpenBilling)
+  const box = useBoxSetup(teamId, deviceId, onCreated)
   const problem = boxSetupProblem(box.phase)
   const [pickedId, setPickedId] = useState<string | null>(null)
   const [instance, setInstance] = useState<RuntimeInstance | null>(null)

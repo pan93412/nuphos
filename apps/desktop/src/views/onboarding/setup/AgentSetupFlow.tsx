@@ -15,16 +15,7 @@ import type { ConnectedCloudAgent } from './SelfHostedSetup'
 import type { AtlasTeam } from '../../../types'
 
 /** Full-window agent setup after creating a workspace: local agents, then an optional cloud agent. */
-export function AgentSetupFlow({
-  team,
-  onFinish,
-  onOpenBilling,
-}: {
-  team: AtlasTeam
-  onFinish: () => void
-  /** A team with no Box plan picks one in Billing; Create Box's refusal links there. */
-  onOpenBilling?: () => void
-}) {
+export function AgentSetupFlow({ team, onFinish }: { team: AtlasTeam; onFinish: () => void }) {
   const [screen, setScreen] = useState<SetupScreen>('local')
   const [boxId, setBoxId] = useState<string | null>(null)
   const [cloudAgent, setCloudAgent] = useState<ConnectedCloudAgent | null>(null)
@@ -57,7 +48,6 @@ export function AgentSetupFlow({
           teamId={team.id}
           deviceId={boxId}
           onCreated={setBoxId}
-          onOpenBilling={onOpenBilling}
           onBack={() => setScreen('cloud')}
           onConnected={(instance) =>
             connected({

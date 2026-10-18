@@ -9,7 +9,8 @@ import { RUNTIME_INSTANCES_CHANGED } from '../../hooks/useRuntimeInstances'
 import { useThisComputer } from '../../hooks/useThisComputer'
 import { useWorkspaceTab } from '../../hooks/useWorkspaceTab'
 
-import { boxAgents, boxPollMs, newBoxBlockedReason, vanishedBoxes } from './boxPresentation'
+import { openBoxPaywall } from './boxPaywallStore'
+import { boxAgents, boxPollMs, vanishedBoxes } from './boxPresentation'
 import { BoxRow } from './BoxRow'
 import { PanelHeading } from './RuntimePanel'
 import { useAgentDevices } from './useAgentDevices'
@@ -36,21 +37,17 @@ export function BoxSection({
   instances,
   onSelect,
   canCreate,
-  onOpenBilling,
 }: {
   teamId: string
   /** Only the team's administrators make Boxes; the backend enforces it. */
   canCreate: boolean
   instances: RuntimeInstance[]
   onSelect: (runtimeId: string) => void
-  /** Where a New Box the plan has no room for goes. */
-  onOpenBilling: () => void
 }) {
   const thisComputer = useThisComputer()
   const [creating, setCreating] = useState(false)
   const previous = useRef<AgentDevice[]>([])
-  const { usage, reload: reloadUsage } = useBoxUsage(teamId)
-  const blocked = newBoxBlockedReason(usage, canCreate)
+  const { reload: reloadUsage } = useBoxUsage(teamId)
   const { isActive } = useWorkspaceTab()
   const {
     list,
@@ -76,18 +73,14 @@ export function BoxSection({
   }, [list])
 
   const create = async () => {
-    if (blocked) {
-      toast.info(blocked)
-      onOpenBilling()
-
-      return
-    }
     setCreating(true)
     try {
       await api.boxCreate(undefined, teamId)
       reload()
     } catch (error) {
-      toast.apiError('Could not create Box', error)
+      // No plan, or past it: the paywall offers one, then makes the Box.
+      if (!openBoxPaywall(teamId, error, () => void create()))
+        toast.apiError('Could not create Box', error)
     } finally {
       setCreating(false)
       reloadUsage()
