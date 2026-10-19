@@ -23,7 +23,9 @@ export function selectedAgentReachability(
 }
 
 /** Why the next message cannot go, or null when it can: no agent, or one that cannot take it. */
-export function runtimeControlSendBlock(control: RuntimeControl | undefined): string | null {
+export function runtimeControlSendBlock(
+  control: Pick<RuntimeControl, 'value' | 'options' | 'onSelect'> | undefined,
+): string | null {
   if (control?.onSelect && (!control.value || control.value.status === 'disabled'))
     return 'Choose an agent to send'
   const reachability = selectedAgentReachability(control)

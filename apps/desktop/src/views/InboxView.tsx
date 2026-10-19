@@ -1,11 +1,17 @@
-import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react'
+import clsx from 'clsx'
+import { ChevronLeft, ChevronRight, Inbox, KeyRound, WifiOff } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
 import { ChoiceCard } from '../components/agent/panel/ChoiceCard'
 import { ConnectCardContext } from '../components/agent/panel/connectCardContext'
+import {
+  runtimeControlSendBlock,
+  selectedAgentReachability,
+} from '../components/agent/panel/runtimeControlSignOut'
 import { relativeTimeFromNow } from '../components/agent/panel/textUtils'
 import { EmptyState } from '../components/EmptyState'
 import { Button } from '../components/ui/button'
+import { useRuntimeInstances } from '../hooks/useRuntimeInstances'
 
 import { useInbox } from './inbox/useInbox'
 
@@ -39,6 +45,12 @@ export function InboxView({
   const current = items[Math.min(index, items.length - 1)]
   const decision = current?.pendingDecision
   const requestNo = listing?.requestNo ?? 0
+  // The asking chat's agent, judged as its composer judges it: offline or signed out cannot take the reply.
+  const { instances } = useRuntimeInstances(teamId)
+  const runtime = instances.find((instance) => instance.id === current?.runtimeId)
+  const agent = runtime ? { value: runtime, options: instances } : undefined
+  const blockedBy = runtimeControlSendBlock(agent)
+  const offline = selectedAgentReachability(agent) === 'offline'
 
   useEffect(() => onLoading?.(listing === null), [listing, onLoading])
   useEffect(() => onCount?.(items.length), [items.length, onCount])
@@ -69,6 +81,7 @@ export function InboxView({
 
   const position = items.indexOf(current)
   const sent = sentFor?.toolCallId === decision.toolCallId && sentFor.requestNo === requestNo
+  const locked = sent || Boolean(blockedBy)
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-6 pt-4 selectable">
@@ -104,13 +117,31 @@ export function InboxView({
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
+        {blockedBy && (
+          <div
+            role="status"
+            className={clsx(
+              'flex items-center gap-2 rounded-md border px-3 py-2 text-[12.5px] text-secondary',
+              offline ? 'border-error/35 bg-error/10' : 'border-warning/35 bg-warning/10',
+            )}
+          >
+            {offline ? (
+              <WifiOff className="h-3.5 w-3.5 shrink-0 text-error" aria-hidden />
+            ) : (
+              <KeyRound className="h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
+            )}
+            <span className="min-w-0 flex-1">
+              {blockedBy}, so this reply can't be sent yet. Open the chat to fix it.
+            </span>
+          </div>
+        )}
         <ConnectCardContext.Provider value={reply}>
           <ChoiceCard
             key={`${decision.toolCallId}:${listing.requestNo}`}
             category={decision.category}
             question={decision.question}
             options={decision.options ?? []}
-            canAct={!sent}
+            canAct={!locked}
           />
         </ConnectCardContext.Provider>
         <textarea
@@ -118,7 +149,7 @@ export function InboxView({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Or reply in your own words"
           rows={3}
-          disabled={sent}
+          disabled={locked}
           className="w-full resize-y rounded-md border border-zGray-800 bg-zGray-850 px-2.5 py-1.5 text-[12.5px] text-main outline-none transition-colors placeholder:text-quaternary focus:border-zGray-600"
         />
         <div className="flex justify-end gap-2">
@@ -131,7 +162,7 @@ export function InboxView({
           </Button>
           <Button
             size="sm"
-            disabled={sent || !draft.trim()}
+            disabled={locked || !draft.trim()}
             onClick={() => reply.send(draft.trim())}
           >
             Send reply
