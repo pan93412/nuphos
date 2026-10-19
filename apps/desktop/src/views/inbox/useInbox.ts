@@ -50,8 +50,6 @@ export function useInbox(teamId: string, refreshKey = 0) {
 
   return {
     listing: listingFor(listing, teamId),
-    /** The newest request so far: a reply sent now is judged by listings after it. */
-    lastRequestNo: useCallback(() => requested.current, []),
     refresh: useCallback(() => setNudge((n) => n + 1), []),
   }
 }

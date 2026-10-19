@@ -7,7 +7,6 @@ import { relativeTimeFromNow } from '../components/agent/panel/textUtils'
 import { EmptyState } from '../components/EmptyState'
 import { Button } from '../components/ui/button'
 
-import { unansweredItems } from './inbox/inboxItems'
 import { useInbox } from './inbox/useInbox'
 
 const REPLY_RECHECK_MS = 3_000
@@ -31,17 +30,15 @@ export function InboxView({
   onOpenConversation,
   onReply,
 }: Props) {
-  const { listing, lastRequestNo, refresh } = useInbox(teamId, refreshKey)
-  // Decision → the newest Inbox request when it was answered here.
-  const [answeredAt, setAnsweredAt] = useState<ReadonlyMap<string, number>>(() => new Map())
-  const items = useMemo(
-    () => (listing ? unansweredItems(listing, answeredAt) : []),
-    [listing, answeredAt],
-  )
+  const { listing, refresh } = useInbox(teamId, refreshKey)
+  const items = listing?.items ?? []
+  // The decision just answered, in which listing: off until the next listing says what's left.
+  const [sentFor, setSentFor] = useState<{ toolCallId: string; requestNo: number } | null>(null)
   const [index, setIndex] = useState(0)
   const [draft, setDraft] = useState('')
   const current = items[Math.min(index, items.length - 1)]
   const decision = current?.pendingDecision
+  const requestNo = listing?.requestNo ?? 0
 
   useEffect(() => onLoading?.(listing === null), [listing, onLoading])
   useEffect(() => onCount?.(items.length), [items.length, onCount])
@@ -50,16 +47,13 @@ export function InboxView({
     () =>
       current && {
         send: (text: string) => {
-          const toolCallId = current.pendingDecision!.toolCallId
-
           onReply(current.sessionId, text)
-          setAnsweredAt((prev) => new Map(prev).set(toolCallId, lastRequestNo()))
+          setSentFor({ toolCallId: current.pendingDecision!.toolCallId, requestNo })
           setDraft('')
-          // Check soon: an answer that did not land shows again.
           setTimeout(refresh, REPLY_RECHECK_MS)
         },
       },
-    [current, onReply, lastRequestNo, refresh],
+    [current, onReply, refresh, requestNo],
   )
 
   if (listing === null) return null
@@ -74,6 +68,7 @@ export function InboxView({
   }
 
   const position = items.indexOf(current)
+  const sent = sentFor?.toolCallId === decision.toolCallId && sentFor.requestNo === requestNo
 
   return (
     <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-6 pt-4 selectable">
@@ -111,11 +106,11 @@ export function InboxView({
         </div>
         <ConnectCardContext.Provider value={reply}>
           <ChoiceCard
-            key={decision.toolCallId}
+            key={`${decision.toolCallId}:${listing.requestNo}`}
             category={decision.category}
             question={decision.question}
             options={decision.options ?? []}
-            canAct
+            canAct={!sent}
           />
         </ConnectCardContext.Provider>
         <textarea
@@ -123,6 +118,7 @@ export function InboxView({
           onChange={(e) => setDraft(e.target.value)}
           placeholder="Or reply in your own words"
           rows={3}
+          disabled={sent}
           className="w-full resize-y rounded-md border border-zGray-800 bg-zGray-850 px-2.5 py-1.5 text-[12.5px] text-main outline-none transition-colors placeholder:text-quaternary focus:border-zGray-600"
         />
         <div className="flex justify-end gap-2">
@@ -133,7 +129,11 @@ export function InboxView({
           >
             Open chat
           </Button>
-          <Button size="sm" disabled={!draft.trim()} onClick={() => reply.send(draft.trim())}>
+          <Button
+            size="sm"
+            disabled={sent || !draft.trim()}
+            onClick={() => reply.send(draft.trim())}
+          >
             Send reply
           </Button>
         </div>
