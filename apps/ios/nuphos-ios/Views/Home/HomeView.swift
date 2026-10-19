@@ -57,7 +57,6 @@ struct HomeView: View {
                         } label: {
                             Label("Search chats", systemImage: "magnifyingglass")
                         }
-                        .keyboardShortcut("f")
                     }
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     ToolbarItem(placement: .topBarTrailing) {
@@ -73,7 +72,6 @@ struct HomeView: View {
                         } label: {
                             Label("Search plans", systemImage: "magnifyingglass")
                         }
-                        .keyboardShortcut("f")
                     }
                     ToolbarSpacer(.fixed, placement: .topBarTrailing)
                     ToolbarItem(placement: .topBarTrailing) {

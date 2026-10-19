@@ -30,7 +30,7 @@ extension FocusedValues {
     @Entry var newChat: (() -> Void)?
 }
 
-/// ⌘N, listed in the menu bar and the ⌘-hold shortcut list.
+/// ⌘N, listed in the menu bar.
 private struct NewChatCommand: Commands {
     @FocusedValue(\.newChat) private var newChat
 
