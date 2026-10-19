@@ -7,7 +7,10 @@ import { relativeTimeFromNow } from '../components/agent/panel/textUtils'
 import { EmptyState } from '../components/EmptyState'
 import { Button } from '../components/ui/button'
 
+import { unansweredItems } from './inbox/inboxItems'
 import { useInbox } from './inbox/useInbox'
+
+const REPLY_RECHECK_MS = 3_000
 
 type Props = {
   teamId: string
@@ -28,34 +31,38 @@ export function InboxView({
   onOpenConversation,
   onReply,
 }: Props) {
-  const loaded = useInbox(teamId, refreshKey)
-  // Answered here, until the next listing no longer has them.
-  const [answered, setAnswered] = useState<ReadonlySet<string>>(() => new Set())
+  const { listing, lastRequestNo, refresh } = useInbox(teamId, refreshKey)
+  // Decision → the newest Inbox request when it was answered here.
+  const [answeredAt, setAnsweredAt] = useState<ReadonlyMap<string, number>>(() => new Map())
   const items = useMemo(
-    () => (loaded ?? []).filter((item) => !answered.has(item.sessionId)),
-    [loaded, answered],
+    () => (listing ? unansweredItems(listing, answeredAt) : []),
+    [listing, answeredAt],
   )
   const [index, setIndex] = useState(0)
   const [draft, setDraft] = useState('')
   const current = items[Math.min(index, items.length - 1)]
   const decision = current?.pendingDecision
 
-  useEffect(() => onLoading?.(loaded === null), [loaded, onLoading])
+  useEffect(() => onLoading?.(listing === null), [listing, onLoading])
   useEffect(() => onCount?.(items.length), [items.length, onCount])
 
   const reply = useMemo(
     () =>
       current && {
         send: (text: string) => {
+          const toolCallId = current.pendingDecision!.toolCallId
+
           onReply(current.sessionId, text)
-          setAnswered((prev) => new Set(prev).add(current.sessionId))
+          setAnsweredAt((prev) => new Map(prev).set(toolCallId, lastRequestNo()))
           setDraft('')
+          // Check soon: an answer that did not land shows again.
+          setTimeout(refresh, REPLY_RECHECK_MS)
         },
       },
-    [current, onReply],
+    [current, onReply, lastRequestNo, refresh],
   )
 
-  if (loaded === null) return null
+  if (listing === null) return null
   if (!current || !decision || !reply) {
     return (
       <EmptyState
