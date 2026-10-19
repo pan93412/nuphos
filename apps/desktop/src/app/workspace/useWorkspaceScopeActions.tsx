@@ -181,23 +181,27 @@ export function useWorkspaceScopeActions(a: Args) {
     [chatPromptNonceRef, enqueueChatPrompt, workspaceActions],
   )
 
-  // Open a fresh agent chat with a plain-text prompt. Auto-sends by default
+  // Open a fresh agent chat with a plain-text prompt, or with `sessionId`
+  // send it into that conversation instead. Auto-sends by default
   // (flows that hand off to the agent, such as cloud connector setup);
   // pass `send: false` to only prefill the composer — used by shortcuts that
   // seed context but want the user to review/edit the intent before sending
   // (e.g. Monitoring's "Watch with Agent").
   const openAgentChatWithPrompt = useCallback(
-    (prompt: string, options?: { send?: boolean; background?: boolean }) => {
+    (prompt: string, options?: { send?: boolean; background?: boolean; sessionId?: string }) => {
+      const sessionId = options?.sessionId
+
       chatPromptNonceRef.current += 1
       workspaceActions.setSessionReadOnly(false)
       if (!options?.background) {
-        workspaceActions.selectSession(null)
+        workspaceActions.selectSession(sessionId ?? null)
         setWorkspaceDockExpanded(false)
       }
       enqueueChatPrompt({
         text: prompt,
         autoSend: options?.send !== false,
-        newChat: true,
+        // An existing conversation (an Inbox reply) instead of a fresh chat.
+        ...(sessionId ? { sessionId } : { newChat: true }),
         mode: 'text',
         replace: options?.send === false,
         nonce: chatPromptNonceRef.current,

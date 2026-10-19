@@ -21,7 +21,7 @@ import { SidebarSectionList } from './sections-list'
 import { teamSections } from './sections-services'
 import { settingsBackTarget } from './types'
 import { useSidebarChrome } from './use-sidebar-chrome'
-import { useSidebarChats, useSidebarCrdSections } from './use-sidebar-data'
+import { useInboxBadge, useSidebarChats, useSidebarCrdSections } from './use-sidebar-data'
 import { useSidebarFavorites } from './use-sidebar-favorites'
 import { useSidebarSharedChats } from './use-sidebar-shared-chats'
 import { sectionsFor, sidebarView } from './view'
@@ -90,7 +90,7 @@ export function Sidebar({
     kubeconfigContext: dynamicNavigation ? kubeconfigContext : null,
     active,
   })
-  const sections = dynamicNavigation
+  const navSections = dynamicNavigation
     ? sectionsFor(
         scope,
         active,
@@ -102,6 +102,7 @@ export function Sidebar({
         customResourceTypeSections,
       )
     : teamSections(rootIntegrations, rootIntegrationsLoading, chatItems)
+  const sections = useInboxBadge(teamId, navSections)
   const view = dynamicNavigation
     ? sidebarView(scope, active, grafanaInstance, repositoryNav)
     : { key: `team:${teamId}`, level: 0 }

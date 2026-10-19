@@ -273,6 +273,7 @@ export const cloudOpsApi = {
       search?: string
       archived?: 'exclude' | 'only'
       sort?: 'activity' | 'created' | 'archived'
+      pendingDecision?: boolean
     },
   ) => ipcRenderer.invoke('agent:listConversations', teamId, options),
   agentRenameConversation: (sessionId: string, title: string, teamId?: string) =>

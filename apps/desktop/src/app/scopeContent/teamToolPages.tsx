@@ -6,6 +6,7 @@ import {
   ClipboardList,
   Clock,
   HeartPulse,
+  Inbox,
   Network,
   ScrollText,
   Sparkles,
@@ -22,6 +23,7 @@ import { AuditLogView } from '../../views/AuditLogView'
 import { BrowserView } from '../../views/BrowserView'
 import { TerminalView } from '../../views/TerminalView'
 import { DesktopView } from '../../views/DesktopView'
+import { InboxView } from '../../views/InboxView'
 import { MonitoringView } from '../../views/MonitoringView'
 import { PlansView } from '../../views/PlansView'
 import { RuntimeFilesView } from '../../views/RuntimeFilesView'
@@ -146,6 +148,21 @@ export function renderTeamToolPages(ctx: ScopeRenderContext): React.ReactNode | 
         onCount={onCount}
         onLoading={onLoading}
         onOpenConversation={onOpenConversation}
+      />,
+    )
+  }
+  if (active === 'team.inbox') {
+    return renderPage(
+      'team.inbox',
+      'Inbox',
+      <Inbox className="w-3.5 h-3.5 text-tertiary" strokeWidth={1.8} />,
+      <InboxView
+        teamId={scope.teamId}
+        refreshKey={refreshKey}
+        onCount={onCount}
+        onLoading={onLoading}
+        onOpenConversation={onOpenConversation}
+        onReply={(sessionId, text) => onOpenAgentChat(text, { sessionId })}
       />,
     )
   }

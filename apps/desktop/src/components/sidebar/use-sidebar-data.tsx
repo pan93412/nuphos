@@ -26,6 +26,8 @@ import type { Item, Section } from './types'
 import type { AgentConversation } from '../../api'
 import type { CustomResourceDefinitionItem, Scope } from '../../types'
 
+export { useInboxBadge } from './use-inbox-badge'
+
 // CRDs are discovery metadata: fetch them once per kubeconfig context, then
 // expose every served resource kind directly in the cluster nav. Cached
 // SWR-style (like the chat list) so returning to a cluster tab paints the
