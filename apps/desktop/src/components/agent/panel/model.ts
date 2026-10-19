@@ -45,7 +45,6 @@ export type { AgentPhase }
 
 export type AgentStatus = {
   label: string
-  startedAt: number | null
 }
 
 export const TOOL_DESCRIPTION_KEYS = [
