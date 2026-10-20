@@ -21,6 +21,8 @@ export function nextSelection(
   if (selected && items.some((item) => item.sessionId === selected.sessionId)) {
     return selected.sessionId
   }
+  // Opened from beyond the listed rows: nothing here says it was answered.
+  if (selected?.index === -1) return selected.sessionId
 
   return items[Math.min(selected?.index ?? 0, items.length - 1)]!.sessionId
 }

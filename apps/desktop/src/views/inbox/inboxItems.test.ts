@@ -22,6 +22,11 @@ test('once answered it leaves the list and the next one opens', () => {
   assert.equal(nextSelection({ sessionId: 'c', index: 2 }, chats('a', 'b')), 'b')
 })
 
+test('a conversation opened from beyond the listed rows stays open through a refresh', () => {
+  // Picked after a load-more, so the first page never listed it: no evidence it was answered.
+  assert.equal(nextSelection({ sessionId: 'z', index: -1 }, chats('a', 'b')), 'z')
+})
+
 test("after a team switch the last team's count is not shown", () => {
   const listing = { teamId: 'team-a', count: 2, requestNo: 1 }
 

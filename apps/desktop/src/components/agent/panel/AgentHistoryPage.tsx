@@ -119,6 +119,9 @@ export function AgentHistoryPage({
     setLoadingListKey(listKey)
     setLoading(true)
   }
+  // The Inbox fits in one page (the backend's most), so a reader beside it always
+  // sees whether its open conversation still waits.
+  const pageSize = pendingDecision ? 100 : HISTORY_PAGE_SIZE
   // Everything here is also in listKey, which stands in for it in the effects below.
   const listOptions = {
     scope: historyScope,
@@ -136,7 +139,7 @@ export function AgentHistoryPage({
 
     void api
       .agentListConversations(teamId, {
-        limit: HISTORY_PAGE_SIZE,
+        limit: pageSize,
         ...listOptions,
       })
       .then((page) => {
@@ -167,7 +170,7 @@ export function AgentHistoryPage({
     try {
       const page = await api.agentListConversations(teamId, {
         cursor: nextPage.cursor,
-        limit: HISTORY_PAGE_SIZE,
+        limit: pageSize,
         ...listOptions,
       })
 
