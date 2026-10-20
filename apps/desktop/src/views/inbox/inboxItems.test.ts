@@ -22,9 +22,11 @@ test('once answered it leaves the list and the next one opens', () => {
   assert.equal(nextSelection({ sessionId: 'c', index: 2 }, chats('a', 'b')), 'b')
 })
 
-test('a conversation opened from beyond the listed rows stays open through a refresh', () => {
-  // Picked after a load-more, so the first page never listed it: no evidence it was answered.
-  assert.equal(nextSelection({ sessionId: 'z', index: -1 }, chats('a', 'b')), 'z')
+test('a conversation pushed out of the listing stays open while it still waits', () => {
+  // Listed at index 1, then newer questions pushed it past the page: its own record says it waits.
+  assert.equal(nextSelection({ sessionId: 'b', index: 1 }, chats('x', 'y', 'a'), true), 'b')
+  // The same displacement after it was answered: the next one opens.
+  assert.equal(nextSelection({ sessionId: 'b', index: 1 }, chats('x', 'y', 'a'), false), 'y')
 })
 
 test("after a team switch the last team's count is not shown", () => {

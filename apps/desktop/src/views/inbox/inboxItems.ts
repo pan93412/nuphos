@@ -10,19 +10,19 @@ export function listingFor(listing: InboxListing | null, teamId: string): InboxL
 
 /**
  * The conversation the Inbox shows after a listing. The open one stays open
- * while it still waits; once answered it leaves the list, and the row that
- * took its place — the next one — opens, the way a mail reader moves on.
+ * while it still waits — listed, or confirmed by its own record when the list
+ * no longer shows it. Once answered, the row that took its place opens, the
+ * way a mail reader moves on. `index` only picks that next row.
  */
 export function nextSelection(
   selected: { sessionId: string; index: number } | null,
   items: AgentConversation[],
+  selectedStillWaits = false,
 ): string | null {
-  if (items.length === 0) return null
-  if (selected && items.some((item) => item.sessionId === selected.sessionId)) {
+  if (selected && (selectedStillWaits || items.some((i) => i.sessionId === selected.sessionId))) {
     return selected.sessionId
   }
-  // Opened from beyond the listed rows: nothing here says it was answered.
-  if (selected?.index === -1) return selected.sessionId
+  if (items.length === 0) return null
 
   return items[Math.min(selected?.index ?? 0, items.length - 1)]!.sessionId
 }

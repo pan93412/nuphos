@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { Inbox } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
+import { api } from '../api'
 import { AgentHistoryPage, AgentPanel } from '../components/agent/AgentPanel'
 import { EmptyState } from '../components/EmptyState'
 import { useElementSize } from '../grafana/useElementSize'
@@ -72,14 +73,34 @@ export function InboxView({
         : null,
     )
   }, [])
-  const onListLoaded = useCallback((list: AgentConversation[]) => {
-    setItems(list)
-    setSelected((prev) => {
-      const next = nextSelection(prev, list)
+  const selectedRef = useRef(selected)
 
-      return next ? { sessionId: next, index: list.findIndex((i) => i.sessionId === next) } : null
-    })
-  }, [])
+  useEffect(() => {
+    selectedRef.current = selected
+  }, [selected])
+  const onListLoaded = useCallback(
+    (list: AgentConversation[]) => {
+      setItems(list)
+      const open = selectedRef.current
+      const settle = (stillWaits: boolean) => {
+        // The reader moved meanwhile: that choice stands.
+        if (selectedRef.current !== open) return
+        const next = nextSelection(open, list, stillWaits)
+
+        setSelected(
+          next ? { sessionId: next, index: list.findIndex((i) => i.sessionId === next) } : null,
+        )
+      }
+
+      if (!open || list.some((item) => item.sessionId === open.sessionId)) return settle(false)
+      // Not listed is not proof it was answered (a longer list can push it out): ask its own record.
+      void api.agentGetConversation(open.sessionId, teamId, { tail: 1, runtimeState: 'omit' }).then(
+        (detail) => settle(Boolean(detail.pendingDecision)),
+        () => settle(true),
+      )
+    },
+    [teamId],
+  )
 
   // Enter or → moves from the list into the open conversation's composer; Esc comes back.
   useEffect(() => {
