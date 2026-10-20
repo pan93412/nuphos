@@ -24,5 +24,8 @@ export function nextSelection(
   }
   if (items.length === 0) return null
 
-  return items[Math.min(selected?.index ?? 0, items.length - 1)]!.sessionId
+  // An off-page selection has index -1: the next row is then the first.
+  const index = Math.max(0, Math.min(selected?.index ?? 0, items.length - 1))
+
+  return items[index]!.sessionId
 }

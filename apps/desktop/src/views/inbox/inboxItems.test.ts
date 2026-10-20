@@ -29,6 +29,11 @@ test('a conversation pushed out of the listing stays open while it still waits',
   assert.equal(nextSelection({ sessionId: 'b', index: 1 }, chats('x', 'y', 'a'), false), 'y')
 })
 
+test('an off-page conversation, once answered, hands over to the first row', () => {
+  // Opened (or kept) beyond the listed rows, so its index is -1.
+  assert.equal(nextSelection({ sessionId: 'z', index: -1 }, chats('a', 'b'), false), 'a')
+})
+
 test("after a team switch the last team's count is not shown", () => {
   const listing = { teamId: 'team-a', count: 2, requestNo: 1 }
 
