@@ -6,32 +6,34 @@ export type ConversationsScope = 'mine' | 'team' | 'shared'
 export type ConversationsArchivedFilter = 'exclude' | 'only'
 export type ConversationsSort = 'activity' | 'created' | 'archived'
 
+export type ListConversationsOptions = {
+  cursor?: string
+  limit?: number
+  // Defaults to 'mine' backend-side — the viewer's own chats in this team.
+  scope?: ConversationsScope
+  /** Narrow team scope to one member's conversations. */
+  ownerId?: string
+  /**
+   * A Trigger's run history. Omitted lists Chats, which excludes trigger runs entirely — the two
+   * are opposite listings, so this is never a refinement of the default. Several ids list a
+   * Watch group's partition triggers together.
+   */
+  triggerIds?: string[]
+  search?: string
+  // Omitted = archived conversations list too (history); 'exclude' = sidebar.
+  archived?: ConversationsArchivedFilter
+  sort?: ConversationsSort
+  /** The Inbox: only conversations waiting on the owner's decision, trigger runs included. */
+  pendingDecision?: boolean
+}
+
 /**
  * teamId leads and is required — the backend rejects a listing without one, so
  * a caller that can't name the team has no question to ask.
  */
 export async function listConversations(
   teamId: string,
-  options?: {
-    cursor?: string
-    limit?: number
-    // Defaults to 'mine' backend-side — the viewer's own chats in this team.
-    scope?: ConversationsScope
-    /** Narrow team scope to one member's conversations. */
-    ownerId?: string
-    /**
-     * A Trigger's run history. Omitted lists Chats, which excludes trigger runs entirely — the two
-     * are opposite listings, so this is never a refinement of the default. Several ids list a
-     * Watch group's partition triggers together.
-     */
-    triggerIds?: string[]
-    search?: string
-    // Omitted = archived conversations list too (history); 'exclude' = sidebar.
-    archived?: ConversationsArchivedFilter
-    sort?: ConversationsSort
-    /** The Inbox: only conversations waiting on the owner's decision, trigger runs included. */
-    pendingDecision?: boolean
-  },
+  options?: ListConversationsOptions,
 ): Promise<ConversationsPage> {
   const params = new URLSearchParams({ teamId })
 
