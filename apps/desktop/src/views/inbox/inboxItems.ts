@@ -1,16 +1,26 @@
 import type { AgentConversation } from '../../api/agent-types'
 
 /** One listing of the Inbox: whose it is, and which request produced it. */
-export type InboxListing = { teamId: string; items: AgentConversation[]; requestNo: number }
-
-/** The conversations waiting on a decision, oldest question first. */
-export function inboxItems(conversations: AgentConversation[]): AgentConversation[] {
-  return conversations
-    .filter((conversation) => conversation.pendingDecision)
-    .sort((a, b) => a.pendingDecision!.askedAt.localeCompare(b.pendingDecision!.askedAt))
-}
+export type InboxListing = { teamId: string; count: number; requestNo: number }
 
 /** Another team's listing is no answer for this one: show nothing until this team's arrives. */
 export function listingFor(listing: InboxListing | null, teamId: string): InboxListing | null {
   return listing?.teamId === teamId ? listing : null
+}
+
+/**
+ * The conversation the Inbox shows after a listing. The open one stays open
+ * while it still waits; once answered it leaves the list, and the row that
+ * took its place — the next one — opens, the way a mail reader moves on.
+ */
+export function nextSelection(
+  selected: { sessionId: string; index: number } | null,
+  items: AgentConversation[],
+): string | null {
+  if (items.length === 0) return null
+  if (selected && items.some((item) => item.sessionId === selected.sessionId)) {
+    return selected.sessionId
+  }
+
+  return items[Math.min(selected?.index ?? 0, items.length - 1)]!.sessionId
 }

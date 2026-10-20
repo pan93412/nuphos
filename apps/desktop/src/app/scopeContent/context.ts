@@ -153,7 +153,7 @@ export type ScopeContentProps = {
    *  on error blocks that can be self-remediated by the agent). */
   openInChat: (text: string, options?: { mode?: 'mention' | 'text'; filePaths?: string[] }) => void
   /** Open a fresh agent chat and auto-send the given prompt. */
-  onOpenAgentChat: (prompt: string, options?: { send?: boolean; sessionId?: string }) => void
+  onOpenAgentChat: (prompt: string, options?: { send?: boolean }) => void
   /** Open a plan (from the Plans library) in the agent chat side panel. */
   onOpenPlanInChat: (planId: string) => void
   onOpenConversation: (sessionId: string) => void

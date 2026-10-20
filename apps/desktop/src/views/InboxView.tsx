@@ -1,174 +1,175 @@
 import clsx from 'clsx'
-import { ChevronLeft, ChevronRight, Inbox, KeyRound, WifiOff } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { Inbox } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { ChoiceCard } from '../components/agent/panel/ChoiceCard'
-import { ConnectCardContext } from '../components/agent/panel/connectCardContext'
-import {
-  runtimeControlSendBlock,
-  selectedAgentReachability,
-} from '../components/agent/panel/runtimeControlSignOut'
-import { relativeTimeFromNow } from '../components/agent/panel/textUtils'
+import { AgentHistoryPage, AgentPanel } from '../components/agent/AgentPanel'
 import { EmptyState } from '../components/EmptyState'
-import { Button } from '../components/ui/button'
-import { useRuntimeInstances } from '../hooks/useRuntimeInstances'
+import { useElementSize } from '../grafana/useElementSize'
+import { useWorkspaceTab } from '../hooks/useWorkspaceTab'
 
-import { useInbox } from './inbox/useInbox'
+import { nextSelection } from './inbox/inboxItems'
 
-const REPLY_RECHECK_MS = 3_000
+import type { AgentConversation } from '../api'
+
+// The rail refetches on this beat, so an answered conversation leaves and the next one opens.
+const INBOX_REFRESH_MS = 5_000
+// Below this the page shows the list alone, and a row opens its conversation.
+const TWO_PANE_MIN_WIDTH = 720
+const RAIL_WIDTH = 340
 
 type Props = {
   teamId: string
+  query: string
   refreshKey: number
   onCount?: (n: number) => void
   onLoading?: (loading: boolean) => void
   onOpenConversation: (sessionId: string) => void
-  /** Sends the answer into the asking conversation as the owner's message. */
-  onReply: (sessionId: string, text: string) => void
 }
 
-/** Every decision an agent is waiting on, one at a time; an answer is a normal reply. */
+/**
+ * Every conversation waiting on the viewer, beside the one being answered —
+ * the Chats reader's own list and panel, listing only `pendingDecision`. The
+ * answer is typed into that conversation's composer; the human turn clears
+ * the decision (#565) and the next listing moves on.
+ */
 export function InboxView({
   teamId,
+  query,
   refreshKey,
   onCount,
   onLoading,
   onOpenConversation,
-  onReply,
 }: Props) {
-  const { listing, refresh } = useInbox(teamId, refreshKey)
-  const items = listing?.items ?? []
-  // The decision just answered, in which listing: off until the next listing says what's left.
-  const [sentFor, setSentFor] = useState<{ toolCallId: string; requestNo: number } | null>(null)
-  const [index, setIndex] = useState(0)
-  const [draft, setDraft] = useState('')
-  const current = items[Math.min(index, items.length - 1)]
-  const decision = current?.pendingDecision
-  const requestNo = listing?.requestNo ?? 0
-  // The asking chat's agent, judged as its composer judges it: offline or signed out cannot take the reply.
-  const { instances } = useRuntimeInstances(teamId)
-  const runtime = instances.find((instance) => instance.id === current?.runtimeId)
-  const agent = runtime ? { value: runtime, options: instances } : undefined
-  const blockedBy = runtimeControlSendBlock(agent)
-  const offline = selectedAgentReachability(agent) === 'offline'
+  const { isActive } = useWorkspaceTab()
+  const { ref, width } = useElementSize<HTMLDivElement>()
+  const twoPane = width === 0 || width >= TWO_PANE_MIN_WIDTH
+  const [items, setItems] = useState<AgentConversation[] | null>(null)
+  const [selected, setSelected] = useState<{ sessionId: string; index: number } | null>(null)
+  const [tick, setTick] = useState(0)
+  // Another team's list and open conversation are no answer for this one.
+  const [shownTeamId, setShownTeamId] = useState(teamId)
 
-  useEffect(() => onLoading?.(listing === null), [listing, onLoading])
-  useEffect(() => onCount?.(items.length), [items.length, onCount])
-
-  const reply = useMemo(
-    () =>
-      current && {
-        send: (text: string) => {
-          onReply(current.sessionId, text)
-          setSentFor({ toolCallId: current.pendingDecision!.toolCallId, requestNo })
-          setDraft('')
-          setTimeout(refresh, REPLY_RECHECK_MS)
-        },
-      },
-    [current, onReply, refresh, requestNo],
-  )
-
-  if (listing === null) return null
-  if (!current || !decision || !reply) {
-    return (
-      <EmptyState
-        icon={Inbox}
-        title="Nothing waiting on you"
-        description="When an agent needs you to decide something, it shows up here, one at a time. Your answer goes back to its chat as your reply."
-      />
-    )
+  if (shownTeamId !== teamId) {
+    setShownTeamId(teamId)
+    setItems(null)
+    setSelected(null)
   }
+  const railRef = useRef<HTMLDivElement>(null)
+  const readerRef = useRef<HTMLDivElement>(null)
 
-  const position = items.indexOf(current)
-  const sent = sentFor?.toolCallId === decision.toolCallId && sentFor.requestNo === requestNo
-  const locked = sent || Boolean(blockedBy)
+  useEffect(() => {
+    const interval = setInterval(() => setTick((n) => n + 1), INBOX_REFRESH_MS)
+
+    return () => clearInterval(interval)
+  }, [])
+  useEffect(() => onLoading?.(items === null), [items, onLoading])
+  useEffect(() => onCount?.(items?.length ?? 0), [items, onCount])
+
+  const select = useCallback((sessionId: string | null, list: AgentConversation[]) => {
+    setSelected(
+      sessionId
+        ? { sessionId, index: list.findIndex((item) => item.sessionId === sessionId) }
+        : null,
+    )
+  }, [])
+  const onListLoaded = useCallback((list: AgentConversation[]) => {
+    setItems(list)
+    setSelected((prev) => {
+      const next = nextSelection(prev, list)
+
+      return next ? { sessionId: next, index: list.findIndex((i) => i.sessionId === next) } : null
+    })
+  }, [])
+
+  // Enter or → moves from the list into the open conversation's composer; Esc comes back.
+  useEffect(() => {
+    if (!isActive || !twoPane) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey || event.shiftKey) return
+      const target = event.target as HTMLElement | null
+      const typing =
+        Boolean(target?.isContentEditable) ||
+        Boolean(target && /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))
+
+      if (event.key === 'Escape' && typing && readerRef.current?.contains(target)) {
+        event.preventDefault()
+        railRef.current?.querySelector<HTMLElement>('[aria-current="true"] button')?.focus()
+
+        return
+      }
+      if ((event.key === 'Enter' || event.key === 'ArrowRight') && !typing) {
+        if (target && target !== document.body && !railRef.current?.contains(target)) return
+        // The first match can be a hidden copy; the composer is the one that takes focus.
+        const composers = readerRef.current?.querySelectorAll<HTMLElement>('[aria-label="Message"]')
+
+        for (const composer of composers ?? []) {
+          composer.focus()
+          if (document.activeElement === composer) {
+            event.preventDefault()
+
+            return
+          }
+        }
+      }
+    }
+
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [isActive, twoPane])
+
+  const empty = items !== null && items.length === 0 && !query
 
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin px-6 pt-4 selectable">
-      <div className="mx-auto w-full max-w-[640px] space-y-3">
-        <div className="flex items-center gap-2 text-[12px] text-tertiary">
-          <button
-            type="button"
-            className="min-w-0 truncate text-left text-[13px] font-medium text-main hover:underline"
-            onClick={() => onOpenConversation(current.sessionId)}
-          >
-            {current.title || current.firstMessage || 'Untitled chat'}
-          </button>
-          <span className="flex-shrink-0">{relativeTimeFromNow(decision.askedAt)}</span>
-          <span className="ml-auto flex-shrink-0 tabular-nums">
-            {position + 1} of {items.length}
-          </span>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Previous"
-            disabled={position === 0}
-            onClick={() => setIndex(position - 1)}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Next"
-            disabled={position === items.length - 1}
-            onClick={() => setIndex(position + 1)}
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-        {blockedBy && (
-          <div
-            role="status"
-            className={clsx(
-              'flex items-center gap-2 rounded-md border px-3 py-2 text-[12.5px] text-secondary',
-              offline ? 'border-error/35 bg-error/10' : 'border-warning/35 bg-warning/10',
-            )}
-          >
-            {offline ? (
-              <WifiOff className="h-3.5 w-3.5 shrink-0 text-error" aria-hidden />
-            ) : (
-              <KeyRound className="h-3.5 w-3.5 shrink-0 text-warning" aria-hidden />
-            )}
-            <span className="min-w-0 flex-1">
-              {blockedBy}, so this reply can't be sent yet. Open the chat to fix it.
-            </span>
-          </div>
-        )}
-        <ConnectCardContext.Provider value={reply}>
-          <ChoiceCard
-            key={`${decision.toolCallId}:${listing.requestNo}`}
-            category={decision.category}
-            question={decision.question}
-            options={decision.options ?? []}
-            canAct={!locked}
-          />
-        </ConnectCardContext.Provider>
-        <textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          placeholder="Or reply in your own words"
-          rows={3}
-          disabled={locked}
-          className="w-full resize-y rounded-md border border-zGray-800 bg-zGray-850 px-2.5 py-1.5 text-[12.5px] text-main outline-none transition-colors placeholder:text-quaternary focus:border-zGray-600"
+    <div ref={ref} className="flex min-h-0 flex-1">
+      {empty && (
+        <EmptyState
+          icon={Inbox}
+          title="You're all caught up"
+          description="When an agent needs you to decide something, the conversation shows up here. Answer it in the chat and it leaves the Inbox."
         />
-        <div className="flex justify-end gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => onOpenConversation(current.sessionId)}
-          >
-            Open chat
-          </Button>
-          <Button
-            size="sm"
-            disabled={locked || !draft.trim()}
-            onClick={() => reply.send(draft.trim())}
-          >
-            Send reply
-          </Button>
-        </div>
+      )}
+      {/* Mounted while empty too: its refetch is what brings the next question in. */}
+      <div
+        ref={railRef}
+        className={clsx(
+          'flex h-full min-h-0 flex-col',
+          empty && 'hidden',
+          twoPane ? 'flex-shrink-0 border-r border-zGray-800/70' : 'min-w-0 flex-1',
+        )}
+        style={twoPane ? { width: RAIL_WIDTH } : undefined}
+      >
+        <AgentHistoryPage
+          teamId={teamId}
+          refreshKey={refreshKey + tick}
+          query={query}
+          openingSessionId={null}
+          selectedSessionId={twoPane ? (selected?.sessionId ?? null) : null}
+          layout="rail"
+          pendingDecision
+          historyScope="mine"
+          onOpenConversation={(sessionId) =>
+            twoPane ? select(sessionId, items ?? []) : onOpenConversation(sessionId)
+          }
+          onListLoaded={onListLoaded}
+          keyboardNavigation={isActive && twoPane}
+        />
       </div>
+      {twoPane && !empty && (
+        <div ref={readerRef} className="flex min-w-0 flex-1 flex-col">
+          {selected && (
+            <AgentPanel
+              key="inbox"
+              variant="page"
+              open
+              focusComposerOnOpen={false}
+              teamId={teamId}
+              sessionId={selected.sessionId}
+              onSessionChange={(sessionId) => select(sessionId, items ?? [])}
+            />
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -70,18 +70,3 @@ test('an agent without a Box has no dot and is not blocked', () => {
   assert.equal(selectedAgentReachability(control(undefined)), null)
   assert.equal(runtimeControlSendBlock(control(undefined)), null)
 })
-
-test('an Inbox reply, which has no agent picker, is held by a yellow or red agent too', () => {
-  const inbox = (local: Partial<NonNullable<RuntimeInstance['local']>>) => {
-    const { value, options } = control(local)
-
-    return { value, options }
-  }
-
-  assert.equal(runtimeControlSendBlock(inbox({ online: false })), 'Its Box is offline')
-  assert.equal(
-    runtimeControlSendBlock(inbox({ online: true, signedIn: false })),
-    'The agent needs to sign in',
-  )
-  assert.equal(runtimeControlSendBlock(inbox({ online: true })), null)
-})

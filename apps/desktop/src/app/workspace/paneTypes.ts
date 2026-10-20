@@ -58,7 +58,7 @@ export type WorkspaceTabPaneProps = {
   copyLink: (href: string) => Promise<void>
   openInChat: (href: string, options?: { mode?: 'mention' | 'text'; filePaths?: string[] }) => void
   /** Open a fresh agent chat and auto-send the given prompt. */
-  onOpenAgentChat: (prompt: string, options?: { send?: boolean; sessionId?: string }) => void
+  onOpenAgentChat: (prompt: string, options?: { send?: boolean }) => void
   updateTab: UpdateWorkspaceTab
   onFilterChange: (filter: string) => void
   enterScopeInTab: (tabId: string, next: Scope, defaultActive?: string) => void

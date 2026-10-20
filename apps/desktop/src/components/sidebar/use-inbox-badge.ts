@@ -1,10 +1,10 @@
-import { useInbox } from '../../views/inbox/useInbox'
+import { useInboxCount } from '../../views/inbox/useInbox'
 
 import type { Section } from './types'
 
 /** Badges the Inbox row with how many of the viewer's conversations wait on them. */
 export function useInboxBadge(teamId: string, sections: Section[]): Section[] {
-  const count = useInbox(teamId).listing?.items.length ?? 0
+  const count = useInboxCount(teamId) ?? 0
 
   if (count === 0) return sections
 

@@ -102,8 +102,6 @@ export type AgentPromptSeed = {
   filePaths?: string[]
   autoSend?: boolean
   newChat?: boolean
-  /** Send into this conversation: held until it is the open tab. */
-  sessionId?: string
   mode?: 'mention' | 'text'
   // Clear the composer before inserting — prefill shortcuts (send: false)
   // replace any draft instead of stacking onto it on repeated clicks.

@@ -2,7 +2,7 @@ import { dataTransferHasFiles } from './attachments'
 import { allCredentialAccess, credentialOptionsLoaded } from './credentialAccess'
 import { unseenCredentials } from './credentialFreshness'
 import { HOME_TAB_ID } from './model'
-import { homeVisible, seedForTab } from './panelVisibility'
+import { homeVisible } from './panelVisibility'
 
 import type { CredentialSelectorControl } from './credentialSections'
 import type { PanelCtx, PanelRenderState } from './ctx'
@@ -120,7 +120,8 @@ export function computePanelRenderState(acc: Acc): PanelRenderState {
             : undefined,
         }
       : undefined
-  const pendingPromptReady = seedForTab(pendingPrompt, activeId, activeTab?.sessionId, HOME_TAB_ID)
+  const pendingPromptReady =
+    pendingPrompt?.newChat && activeId !== HOME_TAB_ID ? null : pendingPrompt
   // Switching conversations must not leave the previous transcript on screen
   // while the next one loads — in the Chats reader that reads as the click
   // having done nothing. The open lands `setTabs`, which clears this.
