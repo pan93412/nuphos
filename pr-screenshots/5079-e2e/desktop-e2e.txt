@@ -1,0 +1,7 @@
+E2E empty search, sections: ["Profile","Signed-in devices","Two-factor authentication","Vault","Appearance","Updates","Local exec","Privacy"]
+E2E search value: "usage data"
+E2E sections: ["Privacy"]
+E2E heading: "Privacy"
+E2E switch label: "Send crash reports and usage data" checked: true stored: true
+E2E after off click, checked: false stored: false
+E2E after on click, checked: true stored: true
