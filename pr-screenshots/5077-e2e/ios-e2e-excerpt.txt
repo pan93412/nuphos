@@ -1,0 +1,10 @@
+Test Case '-[nuphos_iosUITests.UsageDataE2EUITests testUsageDataOffOnOffSurvivesRelaunch]' started.
+E2E_STEP values: default=1 off=0 on=1 off=0
+E2E_STEP app terminated
+E2E_STEP after relaunch value=0
+Test Case '-[nuphos_iosUITests.UsageDataE2EUITests testUsageDataOffOnOffSurvivesRelaunch]' passed (51.434 seconds).
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.434 (51.437) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.434 (51.438) seconds
+	 Executed 1 test, with 0 failures (0 unexpected) in 51.434 (51.439) seconds
+** TEST SUCCEEDED **
+XCODEBUILD_EXIT 0
